@@ -28,5 +28,29 @@ RUN apt install -y autoconf automake libtool make g++ unzip && \
 
 # NodeJS
 
-RUN wget -O - https://deb.nodesource.com/setup_17.x | bash
+RUN wget -O - https://deb.nodesource.com/setup_17.x | bash && \
     apt install -y nodejs
+
+# Tauri
+#RUN apt install -y libwebkit2gtk-4.0-dev \
+#    build-essential \
+#    curl \
+#    wget \
+#    libssl-dev \
+#    libgtk-3-dev \
+#    libappindicator3-0.1-cil-dev \
+#    librsvg2-dev
+# We don't need nvm, we already have latest nodejs installed.
+#RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.2/install.sh | bash
+
+#RUN wget -O /bin/rustup.sh https://sh.rustup.rs && \
+#    chmod +x /bin/rustup.sh && \
+#    rustup.sh -y
+
+# Envoy
+# > Bazel
+RUN wget -O /usr/local/bin/bazel https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-$([ $(uname -m) = "aarch64" ] && echo "arm64" || echo "amd64") && \
+    sudo chmod +x /usr/local/bin/bazel && \
+    apt install -y autoconf automake cmake \
+        curl libtool make ninja-build patch \
+        python3-pip unzip virtualenv

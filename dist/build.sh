@@ -46,3 +46,16 @@ echo 'import "embed"' >> main.go
 echo ' ' >> main.go
 echo '//go:embed robots.txt manifest.json logo512.png logo192.png index.html favicon.ico asset-manifest.json static' >> main.go
 echo 'var Files embed.FS' >> main.go
+
+cd $ROOT/dist
+mkdir -p out/target
+cd out/target
+ROOTFS="$(pwd)"
+
+# Build launcher
+cd $ROOT/dist
+go build -v
+mkdir -p $ROOTFS/bin
+mv dist $ROOTFS/bin/haveno
+echo "install:" > "$ROOTFS/Makefile"
+echo -"\tcp bin/haveno /bin/haveno" "$ROOTFS/Makefile"

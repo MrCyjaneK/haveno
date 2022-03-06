@@ -1,0 +1,4 @@
+To build docker image:
+cd dist/ && sudo docker build -t haveno-builder:latest .
+
+sudo docker run -v (pwd):/build -w /build -it --rm haveno-builder:latest /bin/bash
