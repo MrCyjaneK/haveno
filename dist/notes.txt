@@ -1,4 +1,10 @@
 To build docker image:
 cd dist/ && sudo docker build -t haveno-builder:latest .
+To get envoy binary
+cd dist && ./extract_static_envoy.sh
+To build rest in docker:
+sudo docker run -v (pwd):/build -w /build -it --rm haveno-builder:latest sh -c 'cd dist && ./build.sh'
 
-sudo docker run -v (pwd):/build -w /build -it --rm haveno-builder:latest /bin/bash
+Or for the ease of use, run:
+
+`make release-linux-amd64` in project's root directory.

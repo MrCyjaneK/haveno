@@ -9,6 +9,9 @@ then
     echo "WARN: Build directory should be /haveno"
     cp -r /build /haveno # Fix for relative paths 
 fi
+
+make haveno
+
 git clone https://github.com/haveno-dex/haveno-ui-poc
 cd haveno-ui-poc
 npm install
@@ -36,9 +39,9 @@ cp $ROOT/dist/HavenoDaemon.ts src/HavenoDaemon.ts
 
 # Fix: ERR_OSSL_EVP_UNSUPPORTED
 NODE_OPTIONS=--openssl-legacy-provider npm run build
+mkdir -p $ROOT/dist/ui
 
-cp build/* $ROOT/dist
-
+cp -r build/* $ROOT/dist/ui
 cd $ROOT/dist/ui
 echo 'package ui' > main.go
 echo ' ' >> main.go
@@ -56,6 +59,41 @@ ROOTFS="$(pwd)"
 cd $ROOT/dist
 go build -v
 mkdir -p $ROOTFS/bin
-mv dist $ROOTFS/bin/haveno
 echo "install:" > "$ROOTFS/Makefile"
-echo -"\tcp bin/haveno /bin/haveno" "$ROOTFS/Makefile"
+mv dist $ROOTFS/bin/haveno
+echo -e "\tcp bin/haveno /bin/haveno" >> "$ROOTFS/Makefile"
+mv envoy $ROOTFS/bin/haveno-envoy
+echo -e "\tcp bin/haveno-envoy /bin/haveno-envoy" >> "$ROOTFS/Makefile"
+mkdir -p $ROOTFS/etc
+cp envoy.yaml $ROOTFS/etc/haveno-envoy.yaml
+echo -e "\tcp etc/haveno-envoy.yaml /etc/haveno-envoy.yaml" >> "$ROOTFS/Makefile"
+wget https://github.com/haveno-dex/monero/releases/download/testing4/monero-bins-haveno-linux.tar.gz -O - | tar xzv
+mv monerod "$ROOTFS/bin/haveno-monerod"
+mv monero-wallet-rpc "$ROOTFS/bin/haveno-monero-wallet-rpc"
+echo -e "\tcp bin/haveno-monerod /bin/haveno-monerod" >> "$ROOTFS/Makefile"
+echo -e "\tcp bin/haveno-monero-wallet-rpc /bin/haveno-monero-wallet-rpc" >> "$ROOTFS/Makefile"
+cp ../haveno-seednode "$ROOTFS/bin/haveno-seednode"
+sed -i 's/APP_HOME=/#APP_HOME=/g' "$ROOTFS/bin/haveno-seednode"
+echo -e "\tcp bin/haveno-seednode /bin/haveno-seednode" >> "$ROOTFS/Makefile"
+cp ../haveno-daemon "$ROOTFS/bin/haveno-daemon"
+sed -i 's/APP_HOME=/#APP_HOME=/g' "$ROOTFS/bin/haveno-daemon"
+echo -e "\tcp bin/haveno-daemon /bin/haveno-daemon" >> "$ROOTFS/Makefile"
+# Java libs
+mkdir -p $ROOTFS/usr/lib/haveno
+cp -r ../lib "$ROOTFS/usr/lib/haveno/lib"
+echo -e "\tcp -r usr/lib/haveno /usr/lib/haveno" >> "$ROOTFS/Makefile"
+
+# Create tar archive
+cd "$ROOTFS"
+tar -czf haveno-bundle.tar.gz *
+mv haveno-bundle.tar.gz ..
+
+checkinstall --type=debian \
+    --install=no --fstrans=yes \
+    -y \
+    --pkgname="haveno" \
+    --pkgversion="1.0.0" \
+    --arch=amd64 \
+    --nodoc
+
+mv *.deb ..

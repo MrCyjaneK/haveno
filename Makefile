@@ -4,6 +4,7 @@ build: localnet haveno
 
 clean:
 	./gradlew clean
+	rm -rf dist/out dist/ui
 
 clean-localnet:
 	rm -rf .localnet
@@ -184,5 +185,10 @@ btc-blocks:
 		-rpcuser=haveno \
 		-rpcpassword=1234 \
 		generatetoaddress 101 bcrt1q6j90vywv8x7eyevcnn2tn2wrlg3vsjlsvt46qz
+
+release-linux-amd64:
+	cd dist/ && sudo docker build -t haveno-builder:latest .
+	cd dist && ./extract_static_envoy.sh
+	sudo docker run --platform linux/amd64 -v $(shell pwd):/haveno -w /haveno -it --rm haveno-builder:latest sh -c 'make haveno-apps && cd dist && ./build.sh'
 
 .PHONY: build seednode localnet

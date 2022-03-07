@@ -20,7 +20,7 @@ RUN apt install -y autoconf automake libtool make g++ unzip && \
     ./autogen.sh && \
     ./configure && \
     make -j$(nproc) && \
-    make check && \
+    make check -j$(nproc) && \
     make install && \
     ldconfig && \
     wget https://github.com/grpc/grpc-web/releases/download/1.3.1/protoc-gen-grpc-web-1.3.1-linux-x86_64 -O /bin/protoc-gen-grpc-web && \
@@ -49,8 +49,13 @@ RUN wget -O - https://deb.nodesource.com/setup_17.x | bash && \
 
 # Envoy
 # > Bazel
-RUN wget -O /usr/local/bin/bazel https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-$([ $(uname -m) = "aarch64" ] && echo "arm64" || echo "amd64") && \
-    sudo chmod +x /usr/local/bin/bazel && \
-    apt install -y autoconf automake cmake \
-        curl libtool make ninja-build patch \
-        python3-pip unzip virtualenv
+#RUN wget -O /usr/local/bin/bazel https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-$([ $(uname -m) = "aarch64" ] && echo "arm64" || echo "amd64") && \
+#    sudo chmod +x /usr/local/bin/bazel && \
+#    apt install -y autoconf automake cmake \
+#        curl libtool make ninja-build patch \
+#        python3-pip unzip virtualenv
+
+# nghttp2
+# ...
+
+RUN apt install -y checkinstall
