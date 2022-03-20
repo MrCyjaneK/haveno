@@ -1,18 +1,31 @@
 package main
 
 import (
+	"errors"
 	"log"
-	"net/http"
 	"os"
 	"os/exec"
 	"path"
-	"strconv"
-
-	"github.com/haveno-dex/haveno/dist/ui"
-	"github.com/zserge/lorca"
+	"path/filepath"
 )
 
 var home = os.Getenv("HOME")
+var pathprefix = ""
+
+func init() {
+	f, err := os.Open("/etc/haveno-envoy.yaml")
+	if errors.Is(err, os.ErrNotExist) {
+		p, err := os.Executable()
+		if err != nil {
+			log.Fatal(err)
+		}
+		pathprefix = filepath.Dir(p)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	f.Close()
+}
 
 func main() {
 	log.Println("Running in:", home)
@@ -50,28 +63,18 @@ func main() {
 		"--passwordRequired=false",
 	})
 	log.Println("Starting envoy")
-	go run("haveno-envoy", []string{"-c", "/etc/haveno-envoy.yaml"})
+	go run("haveno-envoy", []string{"-c", pathprefix + "/etc/haveno-envoy.yaml"})
 	// Now we have haevno started (or it is starting.), let's run the frontend.
-	go listenWeb(43313)
-	ui, err := lorca.New("http://127.0.0.1:43313", "", 480, 320)
-	log.Println(err)
-	defer ui.Close()
-	<-ui.Done()
-}
-
-func listenWeb(port int) {
-	http.Handle("/", http.FileServer(http.FS(ui.Files)))
-	err := http.ListenAndServe(":"+strconv.Itoa(port), nil)
-	if err != nil {
-		log.Fatal("listenWeb", err)
-	}
+	run("haveno-frontend", []string{})
 }
 
 func run(cmd string, args []string) {
 	log.Println(cmd, args)
 	c := exec.Command(cmd, args...)
 	c.Env = os.Environ()
-	c.Env = append(c.Env, "APP_HOME=/usr/lib/haveno")
+	c.Env = append(c.Env, "APP_HOME="+pathprefix+"/usr/lib/haveno")
+	c.Env = append(c.Env, "JAVA_HOME="+pathprefix+"/usr/lib/haveno/openjdk")
+	c.Env = append(c.Env, "MONERO_WALLET_RPC_PATH="+pathprefix+"/usr/lib/haveno")
 	c.Stderr = os.Stderr
 	c.Stdout = os.Stdout
 

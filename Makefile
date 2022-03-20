@@ -4,7 +4,11 @@ build: localnet haveno
 
 clean:
 	./gradlew clean
-	rm -rf dist/out dist/ui
+	rm -rf dist/out dist/ui dist/openjdk dist/ui-tauri-pack/haveno/node_modules
+	rm -rf dist/ui-tauri-pack/haveno/src-tauri/target
+	rm -rf build
+	rm -rf dist/AppDir
+	rm -rf dist/haveno-ui-poc
 
 clean-localnet:
 	rm -rf .localnet
@@ -189,6 +193,6 @@ btc-blocks:
 release-linux-amd64:
 	cd dist/ && sudo docker build -t haveno-builder:latest .
 	cd dist && ./extract_static_envoy.sh
-	sudo docker run --platform linux/amd64 -v $(shell pwd):/haveno -w /haveno -it --rm haveno-builder:latest sh -c 'make haveno-apps && cd dist && ./build.sh'
+	sudo docker run --platform linux/amd64 -v $(shell pwd):/haveno -w /haveno -it --rm haveno-builder:latest sh -c 'cd dist && ./build.sh'
 
 .PHONY: build seednode localnet

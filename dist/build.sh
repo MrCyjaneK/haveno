@@ -1,5 +1,10 @@
 #!/bin/bash
 set -e
+set -x
+
+
+source $HOME/.cargo/env
+
 cd $(dirname "$0") && cd ..;
 ROOT="$(pwd)"
 echo "Building in $(pwd)";
@@ -10,7 +15,6 @@ then
     cp -r /build /haveno # Fix for relative paths 
 fi
 
-make haveno
 
 git clone https://github.com/haveno-dex/haveno-ui-poc
 cd haveno-ui-poc
@@ -42,6 +46,14 @@ NODE_OPTIONS=--openssl-legacy-provider npm run build
 mkdir -p $ROOT/dist/ui
 
 cp -r build/* $ROOT/dist/ui
+cp -r build/* $ROOT/dist/ui-tauri-pack/haveno/dist # tauri
+
+cd $ROOT
+make
+
+cd $ROOT/dist
+./download_openjdk.sh
+
 cd $ROOT/dist/ui
 echo 'package ui' > main.go
 echo ' ' >> main.go
@@ -54,38 +66,62 @@ cd $ROOT/dist
 mkdir -p out/target
 cd out/target
 ROOTFS="$(pwd)"
+# Tauri launcher
+cd $ROOT/dist/ui-tauri-pack/haveno
+npm install
+npm run tauri build
 
 # Build launcher
 cd $ROOT/dist
 go build -v
+
+
+
+
 mkdir -p $ROOTFS/bin
 echo "install:" > "$ROOTFS/Makefile"
 mv dist $ROOTFS/bin/haveno
-echo -e "\tcp bin/haveno /bin/haveno" >> "$ROOTFS/Makefile"
+echo -e "\tcp bin/haveno \${DESTDIR}/bin/haveno" >> "$ROOTFS/Makefile"
 mv envoy $ROOTFS/bin/haveno-envoy
-echo -e "\tcp bin/haveno-envoy /bin/haveno-envoy" >> "$ROOTFS/Makefile"
+echo -e "\tcp bin/haveno-envoy \${DESTDIR}/bin/haveno-envoy" >> "$ROOTFS/Makefile"
 mkdir -p $ROOTFS/etc
 cp envoy.yaml $ROOTFS/etc/haveno-envoy.yaml
-echo -e "\tcp etc/haveno-envoy.yaml /etc/haveno-envoy.yaml" >> "$ROOTFS/Makefile"
+echo -e "\tcp etc/haveno-envoy.yaml \${DESTDIR}/etc/haveno-envoy.yaml" >> "$ROOTFS/Makefile"
 wget https://github.com/haveno-dex/monero/releases/download/testing4/monero-bins-haveno-linux.tar.gz -O - | tar xzv
 mv monerod "$ROOTFS/bin/haveno-monerod"
-mv monero-wallet-rpc "$ROOTFS/bin/haveno-monero-wallet-rpc"
-echo -e "\tcp bin/haveno-monerod /bin/haveno-monerod" >> "$ROOTFS/Makefile"
-echo -e "\tcp bin/haveno-monero-wallet-rpc /bin/haveno-monero-wallet-rpc" >> "$ROOTFS/Makefile"
+echo -e "\tcp bin/haveno-monerod \${DESTDIR}/bin/haveno-monerod" >> "$ROOTFS/Makefile"
 cp ../haveno-seednode "$ROOTFS/bin/haveno-seednode"
 sed -i 's/APP_HOME=/#APP_HOME=/g' "$ROOTFS/bin/haveno-seednode"
-echo -e "\tcp bin/haveno-seednode /bin/haveno-seednode" >> "$ROOTFS/Makefile"
+echo -e "\tcp bin/haveno-seednode \${DESTDIR}/bin/haveno-seednode" >> "$ROOTFS/Makefile"
 cp ../haveno-daemon "$ROOTFS/bin/haveno-daemon"
 sed -i 's/APP_HOME=/#APP_HOME=/g' "$ROOTFS/bin/haveno-daemon"
-echo -e "\tcp bin/haveno-daemon /bin/haveno-daemon" >> "$ROOTFS/Makefile"
+echo -e "\tcp bin/haveno-daemon \${DESTDIR}/bin/haveno-daemon" >> "$ROOTFS/Makefile"
 # Java libs
 mkdir -p $ROOTFS/usr/lib/haveno
 cp -r ../lib "$ROOTFS/usr/lib/haveno/lib"
-echo -e "\tcp -r usr/lib/haveno /usr/lib/haveno" >> "$ROOTFS/Makefile"
+echo -e "\tcp -r usr/lib/haveno \${DESTDIR}/usr/lib/haveno" >> "$ROOTFS/Makefile"
+mv monero-wallet-rpc "$ROOTFS/usr/lib/haveno/monero-wallet-rpc"
+echo -e "\tcp usr/lib/haveno/monero-wallet-rpc \${DESTDIR}/usr/lib/haveno/monero-wallet-rpc" >> "$ROOTFS/Makefile"
+# Java itself
+cp -r openjdk "$ROOTFS/usr/lib/haveno/openjdk"
+echo -e "\tcp -r usr/lib/haveno/openjdk \${DESTDIR}/usr/lib/haveno/openjdk" >> "$ROOTFS/Makefile"
+# Tauri
+cp -r ui-tauri-pack/haveno/src-tauri/target/release/bundle/appimage/haveno*.AppImage "$ROOTFS/bin/haveno-frontend"
+echo -e "\tcp -r bin/haveno-frontend \${DESTDIR}/bin/haveno-frontend" >> "$ROOTFS/Makefile"
+# Icons
+mkdir -p "$ROOTFS/usr/share/pixmaps/"
+cp haveno.png "$ROOTFS/usr/share/pixmaps/"
+echo -e "\tmkdir -p \${DESTDIR}/usr/share/pixmaps/"
+echo -e "\tcp usr/share/pixmaps/haveno.png \${DESTDIR}/usr/share/pixmaps/haveno.png"
+# Desktop file
+cp haveno.desktop "$ROOTFS/usr/share/applications/"
+echo -e "\tmkdir -p \${DESTDIR}/usr/share/applications/"
+echo -e "\tcp usr/share/applications/haveno.desktop \${DESTDIR}/usr/share/applications/haveno.desktop"
+
 
 # Create tar archive
 cd "$ROOTFS"
-tar -czf haveno-bundle.tar.gz *
+GZIP=-9 tar -czf haveno-bundle.tar.gz *
 mv haveno-bundle.tar.gz ..
 
 checkinstall --type=debian \
@@ -97,3 +133,24 @@ checkinstall --type=debian \
     --nodoc
 
 mv *.deb ..
+
+AppDir="$ROOT/dist/AppDir"
+mkdir "$AppDir"
+
+cd "$ROOT/dist/out/target"
+
+mkdir -p "$AppDir/"{bin,etc,usr/lib,usr/share/applications,usr/share/pixmaps}
+make install DESTDIR="$AppDir"
+cd "$AppDir"
+
+cp ../haveno.desktop app.desktop
+cp ../haveno.png haveno.png
+echo '#!/bin/sh' > AppRun
+echo 'cd $(dirname "$0")' >> AppRun
+echo 'bin/haveno' >> AppRun
+chmod +x AppRun
+
+cd ..
+appimagetool AppDir
+mv *.AppImage out
+#cd "$AppDir"
