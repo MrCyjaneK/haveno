@@ -40,3 +40,4 @@ dist/dist
 dist/openjdk
 dist/ui-tauri-pack/haveno/node_modules
 dist/ui-tauri-pack/haveno/dist
+dist/AppDir

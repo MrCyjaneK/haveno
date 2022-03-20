@@ -114,6 +114,7 @@ cp haveno.png "$ROOTFS/usr/share/pixmaps/"
 echo -e "\tmkdir -p \${DESTDIR}/usr/share/pixmaps/"
 echo -e "\tcp usr/share/pixmaps/haveno.png \${DESTDIR}/usr/share/pixmaps/haveno.png"
 # Desktop file
+mkdir -p "$ROOTFS/usr/share/applications/"
 cp haveno.desktop "$ROOTFS/usr/share/applications/"
 echo -e "\tmkdir -p \${DESTDIR}/usr/share/applications/"
 echo -e "\tcp usr/share/applications/haveno.desktop \${DESTDIR}/usr/share/applications/haveno.desktop"
